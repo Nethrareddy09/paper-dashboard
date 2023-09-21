@@ -369,8 +369,6 @@ def download():
 			errorType=0
 	return render_template('download.html', mesage = mesage, errorType = errorType)
 
-# Route for the "Forgot Password" page
-
 @app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
@@ -386,27 +384,35 @@ def forgot_password():
  
 @app.route('/verify_otp', methods=['GET', 'POST'])
 def verify_otp():
-    if request.method == 'POST':
-        entered_otp = request.form['otp']
-        new_password = request.form['new_password']
-        if 'reset_password_otp' in session and 'reset_password_email' in session:
-            if entered_otp == session['reset_password_otp']:
-                email = session['reset_password_email']
-                connection = db_connection()
-                connection_cursor = connection.cursor()
-                query = f"UPDATE login_flask_345 SET password = '{new_password}' WHERE email = '{email}';"
-                connection_cursor.execute(query)
-                connection.commit()
-                connection_cursor.close()
-                connection.close()
-                flash('Password reset successful. Please log in with your new password.')
-                return redirect(url_for('login'))
-            else:
-                flash('Incorrect OTP. Please try again.')
-        else:
-            flash('OTP session expired. Please request a new OTP.')
-    return render_template('verify_otp.html')
- 
+	if request.method == 'POST':
+		entered_otp = request.form['otp']
+		new_password = request.form['new_password']
+		confirm_password=request.form['confirm_password']
+		if 'reset_password_otp' in session and 'reset_password_email' in session:
+			if entered_otp == session['reset_password_otp']:
+				if new_password==confirm_password:
+					email = session['reset_password_email']
+					connection = db_connection()
+					connection_cursor = connection.cursor()
+					query = f"UPDATE login_flask_345 SET password = '{new_password}' WHERE email = '{email}';"
+					connection_cursor.execute(query)
+					connection.commit()
+					connection_cursor.close()
+					connection.close()
+					flash('Password reset successful. Please log in with your new password.')
+					return redirect(url_for('login'))
+				else:
+					flash='passwords donot match'
+					return render_template('verify_otp.html',flash=flash)
+			else:
+				flash='Incorrect otp.Please try again'
+				return render_template('verify_otp.html',flash=flash)
+		else:
+		    return render_template('verify_otp.html')
+	return render_template('verify_otp.html')
+
+
+
 if __name__=="__main__":
 	app.run(debug= True)
 

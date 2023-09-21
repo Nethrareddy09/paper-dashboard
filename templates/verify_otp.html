@@ -10,8 +10,6 @@
 
     <title>Verify OTP and Set New Password</title>
 
-    <!-- Add your CSS styling here -->
-
 </head>
 
 <body>
@@ -47,6 +45,11 @@
             </div>
 
             <button type="submit">Set Password</button>
+            {% if flash %}
+
+            {{flash}}
+
+            {% endif%}
 
         </form>
 
