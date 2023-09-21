@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+
+<html>
+
+  {% include 'head.html' %}
+
+<body align="center">
+
+  {% include 'navigation.html' %}
+
+ 
+
+<h1>WELCOME USER</h1>
+
+<form action="/editprofile" >
+
+  <div class="content">
+
+    <div class="row">
+
+      <div class="col-md-4">
+
+        <div class="card card-user">
+
+          <div class="image">
+
+            <img src="../static/img/damir-bosnjak.jpg" alt="...">
+
+          </div>
+
+          <div class="card-body">
+
+            <div class="author">
+
+              <a href="#">
+
+                <img class="avatar border-gray" src="../static/img/mike.jpg" alt="...">
+
+                <h2 class="title">{{ user["username"] }}</h2>
+
+              </a>
+
+           
+
+            </div>
+
+         
+
+          </div>
+
+          <div class="card-footer">
+
+            <hr>
+
+            <div class="button-container">
+
+              <div class="row">
+
+                {% for user in user %}
+                <p>{{user}}</p>
+              {% endfor %}
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="col-md-8">
+
+        <div class="card card-user">
+
+          <div class="card-header">
+
+            <h5 class="card-title">Edit Profile</h5>
+
+          </div>
+
+          <div class="card-body">
+
+            <form>
+
+              <div class="row">
+
+                <div class="col-md-5 pr-1">
+
+                  <div class="form-group">
+
+                    <label>Company (disabled)</label>
+
+                    <input type="text" class="form-control" disabled="" placeholder="Company" value="Minfy Tech.">
+
+                  </div>
+
+                </div>
+
+                <div class="col-md-12">
+
+                  <div class="form-group">
+
+                    <label>Username</label>
+
+                    <input type="text" class="form-control" placeholder="Username" value="{{ user[4] }}"
+
+                  </div>
+
+                </div>
+
+                </div>
+
+              </div>
+
+                <div class="col-md-12">
+
+                  <div class="form-group">
+
+                    <label>Phone number</label>
+
+                    <input type="number" class="form-control" placeholder="number" size="5" value="{{ user[3] }}">
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              <div class="row">
+                <div class="col-md-12">
+                  <div class="form-group">
+                    <label>About Me</label>
+                    <textarea class="form-control textarea">Oh so, your weak rhyme You doubt I'll bother, reading into it</textarea>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+
+                <div class="update ml-auto mr-auto">
+
+                  <button type="submit" class="btn btn-primary btn-round">Update Profile</button>
+
+                </div>
+
+              </div>
+
+            </form>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+
+</html>
+
+ 

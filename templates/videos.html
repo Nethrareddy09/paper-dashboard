@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+
+<html>
+   {% include 'head.html' %}
+   
+   <style>
+      a {
+        text-decoration: none;
+        display: inline-block;
+        padding: 8px 16px;
+      }
+      
+      a:hover {
+        background-color: #ddd;
+        color: black;
+      }
+      
+      .previous {
+        background-color: #f1f1f1;
+        color: black;
+      }
+      
+      .next {
+        background-color: #04AA6D;
+        color: white;
+      }
+      
+      .round {
+        border-radius: 50%;
+      }
+      </style>
+
+   <body>
+
+      {% include 'navigation.html' %}
+      <!-- <ul1 class="pager">
+         <li1 class="previous"><a href="editprofile">Previous</a></li>
+         <li1 class="next"><a href="download">Next</a></li>
+       </ul1>   -->
+
+       <a style="float:right" href="editprofile" class="previous round">&#8249;</a>
+       <a style="float:right" href="download" class="next round">&#8250;</a>
+
+      <!-- <div class="container"> -->
+
+         <h2>Vedios</h2>
+
+         <form action="/videos"  method="post" enctype="multipart/form-data">
+
+            <input type="file" name="files" multiple required>
+
+            <input type="submit" value="Upload">
+
+       
+
+        </form>
+
+        {% for video in videos %}
+
+         <video autoplay width="320" height="240" controls>
+            <source src="/uploads/{{video[0]}}/{{video[1]}}" type="video/mp4">
+            Your browser does not support the video tag.  
+        </video>
+        <form method="POST" action="/delete2/{{video[0]}}/{{video[1]}}" style="display: inline;">
+            <button type="submit" style="font-size:24px"><i class="fa fa-trash-o"></i></button>
+         </form>
+        {% endfor %}
+    </body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+   {% include 'head.html' %}
+   <style>
+a {
+  text-decoration: none;
+  display: inline-block;
+  padding: 8px 16px;
+}
+
+a:hover {
+  background-color: #ddd;
+  color: black;
+}
+
+.previous {
+  background-color: #f1f1f1;
+  color: black;
+}
+
+.next {
+  background-color: #04AA6D;
+  color: white;
+}
+
+.round {
+  border-radius: 50%;
+}
+</style>
+   <body>
+      {% include 'navigation.html' %}
+      <!-- <ul1 class="pager">
+         <li1 class="previous"><a href="gallery">Previous</a></li>
+         <li1 class="next"><a href="{{url_for('editprofile')}}">Next</a></li>
+       </ul1> -->
+       <a style="float:right" href="gallery" class="previous round">&#8249;</a>
+       <a style="float:right" href="editprofile" class="next round">&#8250;</a>
+      <!-- <div class="container"> -->
+         <h2>Image Gallery</h2>
+         <form action="/gallery" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" multiple required/>
+            <input type="submit" value="Upload">
+         </form>
+         <div class="row">
+            {% for image in images %}
+            <div class="col-md-4">
+               <div class="thumbnail">
+                  <a href="/uploads/{{image[0]}}/{{image[1]}}" target="_blank">
+                     <img src="/uploads/{{image[0]}}/{{image[1]}}" class="img-thumbnail" alt="Cinque Terre" width="304" height="236">
+                     <form method="POST" action="/delete/{{image[0]}}/{{image[1]}}" style="display: inline;">
+                        <button type="submit" style="font-size:24px"><i class="fa fa-trash-o"></i></button>
+                     </form>
+                     <br>
+                     <br>
+                     <div class="caption"></div>
+                  </a>
+               </div>
+            </div>
+            {% endfor %}
+         </div>
+      <!-- </div> -->
+   </body>
+</html>

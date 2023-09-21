@@ -1,0 +1,48 @@
+<html>
+	<style>
+	.btn-default{
+		box-shadow: 1px 2px 5px #000000;
+	}
+
+input[type=submit] {
+  background-color: #04AA6D;
+  color: white;
+  cursor: pointer;
+}
+.btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 4px;
+  margin: 5px 0;
+  opacity: 0.85;
+  display: inline-block;
+  font-size: 17px;
+  line-height: 20px;
+  text-decoration: none; /* remove underline from anchors */
+}
+		</style>
+	
+	{% include 'head.html' %}
+	<body></br></br></br></br></br>
+		<div align="center">
+		<div align="center" class="border">
+			<div class="header">
+				<h1 class="word">Login</h1>
+			</div></br></br></br>
+			<h2 class="word">
+				<form action="{{ url_for('login') }}" method="post">
+                    {% if message is defined and message %}
+			<div class="alert alert-warning"> <strong> {{ message }} </strong></div>
+		{% endif %}
+				<div class="msg">{{ msg }}</div>
+					<input id="username" name="username" type="text" placeholder="Enter Your Username" class="textbox"/></br></br>
+					<input id="password" name="password" type="password" placeholder="Enter Your Password" class="textbox"/></br></br></br>
+					<input type="submit" value="Login">
+				</form>
+			</h2>
+			<p class="bottom">Don't have an account? <a class="bottom" href="{{url_for('register')}}"> Sign Up here</a></p>
+			<p class="bottom">Forgot Password?<a class="bottom" href="{{url_for('forgot_password')}}">setnewpassword</a></p>
+		</div>
+	</body>
+</html>
