@@ -8,7 +8,11 @@ import os
 import re
 from pytube import YouTube
 from pathlib import *
+from fpdf import *
 from app import *
+import uuid
+import datetime
+import pika, os
 
 
 # initialize first flask
@@ -32,6 +36,12 @@ def db_connection():
   port="26098",
   database="defaultdb")
   return connection
+
+def rabbitdq_connection():
+        url = os.environ.get('CLOUDAMQP_URL', 'amqps://bveiocbd:vAnbunpOezRO4FIFw81RuZyzx-SK4akN@puffin.rmq2.cloudamqp.com/bveiocbd')
+        params = pika.URLParameters(url)
+        connection1 = pika.BlockingConnection(params)
+        return connection1
 
 @app.route('/validate', methods=['POST'])
 def validate_otp(email, otp):
@@ -139,7 +149,7 @@ def register():
 				message = "Please enter an email address"
 			return render_template('register.html')
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif','mp4','avi'}
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif','mp4','avi','txt','pdf'}
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -249,6 +259,9 @@ def uploads(user_id, filename):
 				return send_file(f"uploads/{user_id}/{filename}")
 			elif filename.lower().endswith(('png', 'jpg', 'jpeg', 'gif')):
 				return send_file(f"uploads/{user_id}/{filename}")
+			elif filename.lower().endswith(('txt','pdf')):
+				pdf_path=os.path.join('uploads',str(user_id),filename)
+				return send_file(pdf_path,as_attachment=False)
 		else:
 			return "Forbidden", 403
 
@@ -411,6 +424,125 @@ def verify_otp():
 		    return render_template('verify_otp.html')
 	return render_template('verify_otp.html')
 
+@app.route('/text_to_pdf', methods=['GET', 'POST'])
+def text_to_pdf():
+		if request.method == 'GET':
+			if 'user_id'in session:
+				user_id=session.get('user_id')
+				print(user_id)
+				connection = db_connection()
+				connection_cursor = connection.cursor()
+				query = f" SELECT user_id,filename from login_flask_upload2 WHERE user_id='{user_id}';"
+				print("========"+query)
+				connection_cursor.execute(query)
+				files = connection_cursor.fetchall()
+				print("==========")
+				print(files)
+				connection_cursor.close()
+				connection.close()
+				pdf_files=[file for file in files if file[1].lower().endswith(('pdf','txt'))]
+				print(pdf_files)
+				return render_template('text_to_pdf.html', pdf_files=pdf_files)
+			
+		elif request.method == 'POST':
+			print(request.files)
+			message=""
+			errorType = 1
+			if 'user_id' in session and 'text_file' in request.files:
+				text_file=request.files['text_file']
+				print(f"===={text_file}")
+				connection = db_connection()
+				connection_cursor = connection.cursor()
+				rmq_conn = rabbitdq_connection()
+				rmq_channel = rmq_conn.channel()
+				rmq_channel.queue_declare(queue="text_to_pdf_queue", durable=True)
+				for text_file in request.files.getlist('text_file'):
+					if allowed_file(text_file.filename):
+						user_id=session['user_id']
+						path=os.getcwd()
+						print(path)
+						UPLOAD_FOLDER=os.path.join(path,'uploads')
+						app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+						filename = secure_filename(text_file.filename)
+						os.makedirs(os.path.dirname(f"uploads/{user_id}/{filename}"), exist_ok=True)
+						pdf_path=text_file.save(os.path.join(f"{app.config['UPLOAD_FOLDER']}/{user_id}", filename))
+						print(pdf_path)
+
+						timestamp = datetime.datetime.now()
+						status="queued"
+						id=uuid.uuid1()
+						
+						query=f"INSERT INTO login_flask_queue2(job_id,job_name,user_id,time_stamp,job_status) VALUES ('{id}', '{filename}','{user_id}','{timestamp}','{status}');"
+						connection_cursor.execute(query)
+						connection.commit()
+
+						payload={
+							"job_id": str(id),
+							"job_name": filename,
+							"user_id": user_id,
+							"time_stamp": str(timestamp)
+						}
+						print(payload)
+						rmq_channel.basic_publish(body=str(payload), exchange="", routing_key="text_to_pdf_queue")
+
+				message = 'File downloaded successfully'
+				errorType = 1
+				connection_cursor.close()
+				connection.close()
+				rmq_channel.close()
+				rmq_conn.close()
+			# connection_cursor.close()
+			# connection.close()
+			# rmq_channel.close()
+			# rmq_conn.close()
+			return render_template('text_to_pdf.html',message=message,errorType = errorType)
+
+	
+			
+@app.route("/bulkdownload", methods=["GET","POST"])
+def bulkdownload():      
+	mesage = ''
+	errorType = 0
+	if request.method == 'POST' and 'video_url' in request.form:
+		youtubeUrls = request.form.get("video_url")
+		youtubeUrls = youtubeUrls.split("\n")
+
+		connection = db_connection()
+		connection_cursor = connection.cursor()
+		rmq_conn = rabbitdq_connection()
+		rmq_channel = rmq_conn.channel()
+		rmq_channel.queue_declare(queue="youtube_download_queue", durable=True)
+
+		user_id = session['user_id']		
+		timestamp = datetime.datetime.now()
+		status="queued"
+
+		for url in youtubeUrls:
+			id = uuid.uuid1()
+			print(id)
+			query2=f"INSERT INTO login_flask_queue(job_id,job_url,user_id,time_stamp,job_status) VALUES ('{id}', '{url}','{user_id}','{timestamp}','{status}');"
+			print(f"++++++++++++++++++++++{query2}")
+			connection_cursor.execute(query2)
+			connection.commit()
+
+			payload={
+				"job_id": str(id),
+				"job_url": url,
+				"user_id": user_id,
+				"timestamp": str(timestamp)
+			}
+			print(payload)
+			rmq_channel.basic_publish(body=str(payload), exchange="", routing_key="text_to_pdf_queue")
+
+		mesage = 'Video Downloaded and Added to Your Profile Successfully!'
+		
+		errorType = 1
+		connection_cursor.close()
+		connection.close()
+		rmq_channel.close()
+		rmq_conn.close()
+
+	return render_template('bulkdownload.html', mesage = mesage, errorType = errorType)
 
 
 if __name__=="__main__":

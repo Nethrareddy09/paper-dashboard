@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+<html>
+   {% include 'head.html' %}
+   
+   <style>
+      a {
+        text-decoration: none;
+        display: inline-block;
+        padding: 8px 16px;
+      }
+      
+      a:hover {
+        background-color: #ddd;
+        color: black;
+      }
+      
+      .previous {
+        background-color: #f1f1f1;
+        color: black;
+      }
+      
+      .next {
+        background-color: #04AA6D;
+        color: white;
+      }
+      
+      .round {
+        border-radius: 50%;
+      }
+      </style>
+
+   <body>
+
+
+      {% include 'navigation.html' %}
+
+         <h2>PDF Maker</h2>
+         {% if message is defined and message %}
+            <div class="alert alert-warning"> <strong> {{ message }} </strong></div>
+          {% endif %}
+
+         <form action="/text_to_pdf"  method="post" enctype="multipart/form-data">
+
+            <input type="file" name="text_file" accept=".txt" multiple required>
+
+            <input type="submit" value="Convert to PDF">
+            
+        </form>
+
+        {% for pdf_file in pdf_files %}
+
+         <h3>converted</h3>
+            <embed src="/uploads/{{pdf_file[0]}}/{{pdf_file[1]}}" width="500" height="400" type="application/pdf"
+            {% endfor %}
+    </body>
+</html>
