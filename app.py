@@ -14,16 +14,22 @@ import uuid
 import datetime
 import pika, os
 
-
+from dotenv import load_dotenv
+current_directory = os.path.dirname(os.path.abspath(__file__))
+dotenv_path = os.path.join(current_directory, '.env')
+# Load environment variables from the .env file
+load_dotenv(dotenv_path)
 # initialize first flask
+
 app = Flask(__name__)
 mail = Mail(app)
 app.secret_key='nethra325reddy@gmail.com'
 
 app.config['MAIL_SERVER']='smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
-app.config['MAIL_USERNAME'] = 'nethra325reddy@gmail.com'
-app.config['MAIL_PASSWORD'] = 'uaij ksij fjap tecl'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['RQ_AMQPS']=os.environ.get('RQ_AMQPS')
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
 mail = Mail(app)
@@ -38,10 +44,11 @@ def db_connection():
   return connection
 
 def rabbitdq_connection():
-        url = os.environ.get('CLOUDAMQP_URL', 'amqps://bveiocbd:vAnbunpOezRO4FIFw81RuZyzx-SK4akN@puffin.rmq2.cloudamqp.com/bveiocbd')
-        params = pika.URLParameters(url)
-        connection1 = pika.BlockingConnection(params)
-        return connection1
+		d=os.environ.get('RQ_AMQPS')
+		url = os.environ.get('CLOUDAMQP_URL', d)
+		params = pika.URLParameters(url)
+		connection1 = pika.BlockingConnection(params)
+		return connection1
 
 @app.route('/validate', methods=['POST'])
 def validate_otp(email, otp):

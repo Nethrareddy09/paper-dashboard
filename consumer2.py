@@ -12,6 +12,11 @@ import uuid
 import datetime
 import pika, os
 
+from dotenv import load_dotenv
+current_directory = os.path.dirname(os.path.abspath(__file__))
+dotenv_path = os.path.join(current_directory, '.env')
+# Load environment variables from the .env file
+load_dotenv(dotenv_path)
 
 def db_connection():
   connection = mysql.connector.connect(
@@ -22,8 +27,8 @@ def db_connection():
   database="defaultdb")
   return connection
 
-
-url = os.environ.get('CLOUDAMQP_URL', 'amqps://bveiocbd:vAnbunpOezRO4FIFw81RuZyzx-SK4akN@puffin.rmq2.cloudamqp.com/bveiocbd')
+e=os.environ.get('RQ_AMQPS')
+url = os.environ.get('CLOUDAMQP_URL', e)
 params = pika.URLParameters(url)
 connection1 = pika.BlockingConnection(params)
 rq_channel = connection1.channel()
