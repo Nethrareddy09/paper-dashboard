@@ -49,9 +49,7 @@
         </form>
 
         {% for pdf_file in pdf_files %}
-
-         <h3>converted</h3>
-            <embed src="/uploads/{{pdf_file[0]}}/{{pdf_file[1]}}" width="500" height="400" type="application/pdf"
+            <embed src="{{ pdf_file }}" width="500" height="400" type="application/pdf">
             {% endfor %}
     </body>
 </html>

@@ -1,4 +1,3 @@
-
 import mysql.connector
 from werkzeug.utils import secure_filename
 from random import *
@@ -11,12 +10,15 @@ from app import *
 import uuid
 import datetime
 import pika, os
+import boto3
 
 from dotenv import load_dotenv
 current_directory = os.path.dirname(os.path.abspath(__file__))
 dotenv_path = os.path.join(current_directory, '.env')
 # Load environment variables from the .env file
 load_dotenv(dotenv_path)
+
+s3_client = boto3.client('s3', aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=S3_REGION)
 
 def db_connection():
   connection = mysql.connector.connect(
@@ -38,6 +40,7 @@ rmq_channel.queue_declare(queue="text_to_pdf_queue", durable=True)
 connection = db_connection()
 connection_cursor = connection.cursor()
 
+
 def download_txt_to_pdf(ch, method, properties, body):
                 print(body.decode().replace("'","\""))
                 payload = json.loads(body.decode().replace("'","\""))
@@ -45,34 +48,36 @@ def download_txt_to_pdf(ch, method, properties, body):
                 job_id = payload["job_id"]
                 filename = payload["job_name"]
                 user_id = payload["user_id"]
+                bucket_name=payload["bucket_name"]
                 print(f"+++++++++++++++{user_id}")
                 print(f"+++++++++++++++{filename}")
-
-
+                s3_key=payload["key"]
                 path = os.getcwd()
+
                 UPLOAD_FOLDER = os.path.join(path, 'uploads')
-                print(f"--------->{UPLOAD_FOLDER}")
-                base = os.path.basename(filename)
+                # Extract the base name without extension from the S3 key
+                base = os.path.basename(s3_key)
                 c = os.path.splitext(base)[0]
-                
-                if not os.path.exists(os.path.join(UPLOAD_FOLDER, str(user_id))):
-                      os.makedirs(os.path.join(UPLOAD_FOLDER, str(user_id)))
-                      file_path = os.path.join(UPLOAD_FOLDER, str(user_id), os.path.basename(filename))
-                      with open(file_path, 'wb') as file:
-                             file.write(body)
+                pdf_path = os.path.join(UPLOAD_FOLDER, f"{user_id}/{c}.pdf")
+                os.makedirs(os.path.dirname(pdf_path), exist_ok=True)
 
-       
-                
+                s3_client.download_file(bucket_name, s3_key, pdf_path)
 
-                # text_content = filename.read()
-                pdf=FPDF()
-                pdf.add_page()
-                pdf.set_font("Arial", size=15)
-                f=open((f"uploads/{user_id}/{filename}"),"r")
-                for x in f:
-                        pdf.cell(200,10,txt=x,ln=1,align="C")
-                pdf.output(f"uploads/{user_id}/{c}.pdf")
-                
+                if os.path.exists(pdf_path):
+                    pdf = FPDF()
+                    pdf.add_page()
+                    pdf.set_font("Arial", size=15)
+                    with open(pdf_path, "r") as text_file:
+                        for line in text_file:
+                            pdf.cell(200, 10, txt=line, ln=1, align="C")
+                    pdf.output(pdf_path)
+
+                    s3_client.upload_file(pdf_path, bucket_name, f"uploads/{user_id}/pdf/{filename}.pdf", ExtraArgs = {
+                          "ContentDisposition": "inline",
+                          "ContentType": "application/pdf"
+                    })
+
+                    os.remove(pdf_path)
 
                 query = f"INSERT INTO login_flask_upload2 (user_id, filename) VALUES ('{user_id}','{c}.pdf');"
                 connection_cursor.execute(query)

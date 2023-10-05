@@ -13,6 +13,7 @@ from app import *
 import uuid
 import datetime
 import pika, os
+import boto3
 
 from dotenv import load_dotenv
 current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -23,7 +24,7 @@ load_dotenv(dotenv_path)
 
 app = Flask(__name__)
 mail = Mail(app)
-app.secret_key='nethra325reddy@gmail.com'
+app.secret_key=os.environ.get('MAIL_USERNAME')
 
 app.config['MAIL_SERVER']='smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
@@ -33,6 +34,15 @@ app.config['RQ_AMQPS']=os.environ.get('RQ_AMQPS')
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
 mail = Mail(app)
+app.config['AWS_ACCESS_KEY_ID'] = os.environ.get('AWS_ACCESS_KEY_ID')
+app.config['AWS_SECRET_ACCESS_KEY'] = os.environ.get('AWS_SECRET_ACCESS_KEY')
+S3_REGION= 'ap-south-1'
+AWS_ACCESS_KEY_ID=os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY=os.environ.get('AWS_SECRET_ACCESS_KEY')
+bucket_name = "s3-flask-demo"
+
+s3_client = boto3.client('s3', aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name=S3_REGION)
+
 
 def db_connection():
   connection = mysql.connector.connect(
@@ -65,24 +75,6 @@ def validate_otp(email, otp):
 		else:
 			return False
 		
-# @app.route('/profile')
-# def profile():
-# 			if 'user_id' in session:
-# 				connection = db_connection()
-# 				connection_cursor = connection.cursor()
-
-# 				user_id = session['user_id']
-# 				query=f"SELECT * from login_flask_345 where personid ={user_id}"
-# 				print("========")
-# 				connection_cursor.execute(query)
-# 				users =connection_cursor.fetchone()
-# 				print(users)
-# 				return render_template('editprofile.html',users=users)
-# 			else:
-# 				message="You must be logged in"
-# 				return render_template('login.html',message=message)
-
-
 @app.route('/', methods=['GET','POST'])
 def login():
 	if request.method == 'GET':
@@ -285,9 +277,6 @@ def editprofile():
 					user=connection_cursor.fetchone()
 					connection.close()
 					return render_template('editprofile.html',user=user)
-				# if user is None:
-				# 		return "User not found"
-				#  return render_template('editprofile.html',user=user)
 				
 				if request.method=="POST":
 					new_username=request.form['username']
@@ -431,6 +420,7 @@ def verify_otp():
 		    return render_template('verify_otp.html')
 	return render_template('verify_otp.html')
 
+
 @app.route('/text_to_pdf', methods=['GET', 'POST'])
 def text_to_pdf():
 		if request.method == 'GET':
@@ -439,17 +429,33 @@ def text_to_pdf():
 				print(user_id)
 				connection = db_connection()
 				connection_cursor = connection.cursor()
-				query = f" SELECT user_id,filename from login_flask_upload2 WHERE user_id='{user_id}';"
+				query = f"SELECT * from login_flask_queue2 WHERE user_id='{user_id}';"
+				gallery_files=[]
 				print("========"+query)
 				connection_cursor.execute(query)
-				files = connection_cursor.fetchall()
+				rows = connection_cursor.fetchall()
 				print("==========")
-				print(files)
+				print()
+				if rows is not None:
+					for row in rows:
+						print(f"+++(((((()))))){row}")
+						user_id=row[2]
+						bucket_name=row[5]
+						key=row[6]
+						preassigned_url = s3_client.generate_presigned_url(
+							ClientMethod = 'get_object',
+							Params = {
+								'Bucket':bucket_name,
+								'Key': key+".pdf"},
+							ExpiresIn = 360) 
+						gallery_files.append(preassigned_url)
+				print(f"----------------{gallery_files}")
+
 				connection_cursor.close()
 				connection.close()
-				pdf_files=[file for file in files if file[1].lower().endswith(('pdf','txt'))]
-				print(pdf_files)
-				return render_template('text_to_pdf.html', pdf_files=pdf_files)
+				pdf_files=[file for file in rows if file[1].lower().endswith(('pdf','txt'))]
+				print(f"-----*******{pdf_files}")
+			return render_template('text_to_pdf.html', pdf_files=gallery_files)
 			
 		elif request.method == 'POST':
 			print(request.files)
@@ -466,28 +472,39 @@ def text_to_pdf():
 				for text_file in request.files.getlist('text_file'):
 					if allowed_file(text_file.filename):
 						user_id=session['user_id']
-						path=os.getcwd()
-						print(path)
-						UPLOAD_FOLDER=os.path.join(path,'uploads')
-						app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+						# path=os.getcwd()
+						# print(path)
+						# UPLOAD_FOLDER=os.path.join(path,'uploads')
+						# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 						filename = secure_filename(text_file.filename)
-						os.makedirs(os.path.dirname(f"uploads/{user_id}/{filename}"), exist_ok=True)
-						pdf_path=text_file.save(os.path.join(f"{app.config['UPLOAD_FOLDER']}/{user_id}", filename))
-						print(pdf_path)
-
+						print(filename)
+						# os.makedirs(os.path.dirname(f"uploads/{user_id}/{filename}"), exist_ok=True)
+						# pdf_path=text_file.save(os.path.join(f"{app.config['UPLOAD_FOLDER']}/{user_id}", filename))
+						# print(pdf_path)
+						key=f"uploads/{user_id}/pdf/{filename}"
+						
 						timestamp = datetime.datetime.now()
 						status="queued"
 						id=uuid.uuid1()
-						
-						query=f"INSERT INTO login_flask_queue2(job_id,job_name,user_id,time_stamp,job_status) VALUES ('{id}', '{filename}','{user_id}','{timestamp}','{status}');"
+						bucket_name = "s3-flask-demo"
+
+						s3_client.upload_fileobj(
+							text_file,
+							bucket_name,
+							f"uploads/{user_id}/pdf/{filename}"
+						)
+
+						query=f"INSERT INTO login_flask_queue2(job_id,job_name,user_id,time_stamp,job_status,bucket_name,`key`) VALUES ('{id}', '{filename}','{user_id}','{timestamp}','{status}','{bucket_name}','{key}');"
 						connection_cursor.execute(query)
 						connection.commit()
-
+						
 						payload={
 							"job_id": str(id),
 							"job_name": filename,
 							"user_id": user_id,
-							"time_stamp": str(timestamp)
+							"time_stamp": str(timestamp),
+							"bucket_name":bucket_name,
+							"key":f"uploads/{user_id}/pdf/{filename}"
 						}
 						print(payload)
 						rmq_channel.basic_publish(body=str(payload), exchange="", routing_key="text_to_pdf_queue")
@@ -498,10 +515,6 @@ def text_to_pdf():
 				connection.close()
 				rmq_channel.close()
 				rmq_conn.close()
-			# connection_cursor.close()
-			# connection.close()
-			# rmq_channel.close()
-			# rmq_conn.close()
 			return render_template('text_to_pdf.html',message=message,errorType = errorType)
 
 	
@@ -536,7 +549,7 @@ def bulkdownload():
 				"job_id": str(id),
 				"job_url": url,
 				"user_id": user_id,
-				"timestamp": str(timestamp)
+				"time_stamp": str(timestamp)
 			}
 			print(payload)
 			rmq_channel.basic_publish(body=str(payload), exchange="", routing_key="text_to_pdf_queue")
