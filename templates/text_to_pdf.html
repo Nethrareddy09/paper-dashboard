@@ -47,12 +47,22 @@
             <input type="submit" value="Convert to PDF">
             
         </form>
-
+<div>
         {% for pdf_file in pdf_files %}
+              <div class="w3-container"> 
             <embed src="{{ pdf_file }}" width="500" height="400" type="application/pdf">
-              <form method="POST" action="/delete2/{{ pdf_file }}" style="display: inline;">
-                <button type="submit" style="font-size:24px"><i class="fa fa-trash-o"></i></button>
-             </form>
-            {% endfor %}
+              </div>
+      {% endfor %}
+    </div>
+
+      {% for row in rows %}
+      <div class="w3-container"> 
+      <form method="POST" action="/delete_pdf/{{row[2]}}/{{row[0]}}" style="display: inline;">
+        <button type="submit" style="font-size:24px"><i class="fa fa-trash-o"></i></button>
+        
+    </form>
+    {% endfor %}
+    </div>
     </body>
 </html>
+

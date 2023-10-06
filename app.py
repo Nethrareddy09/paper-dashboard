@@ -200,6 +200,22 @@ def delete2(user_id,filename):
 			return redirect(url_for('videos'))
 		else:
 			return "Forbidden", 403
+		
+@app.route('/delete_pdf/<int:user_id>/<job_id>', methods=['POST'])
+def delete_pdf(user_id,job_id):
+	session_user_id = session.get('user_id')
+	if session_user_id is not None and str(session_user_id) == str(user_id):
+			connection = db_connection()
+			connection_cursor = connection.cursor()
+			query2 = f"DELETE FROM login_flask_queue2 WHERE user_id='{user_id}' AND job_id='{job_id}';"
+			print("--------------")
+			connection_cursor.execute(query2)
+			connection.commit()
+			connection_cursor.close()
+			connection.close()
+			return redirect (url_for('text_to_pdf'))
+	else:
+			return "Forbidden", 403
 
 @app.route('/gallery',methods=['POST','GET'])
 def gallery():
@@ -434,6 +450,7 @@ def text_to_pdf():
 				print("========"+query)
 				connection_cursor.execute(query)
 				rows = connection_cursor.fetchall()
+				print(rows)
 				print("==========")
 				print()
 				if rows is not None:
@@ -455,7 +472,7 @@ def text_to_pdf():
 				connection.close()
 				pdf_files=[file for file in rows if file[1].lower().endswith(('pdf','txt'))]
 				print(f"-----*******{pdf_files}")
-			return render_template('text_to_pdf.html', pdf_files=gallery_files)
+			return render_template('text_to_pdf.html', pdf_files=gallery_files,rows=rows)
 			
 		elif request.method == 'POST':
 			print(request.files)
